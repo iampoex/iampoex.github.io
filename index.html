@@ -197,7 +197,7 @@
     function getOperatorExplanation(operator) {
       if (operator.endsWith("IfExists")) {
         let baseOp = operator.slice(0, -8); // Remove "IfExists"
-        return getOperatorExplanation(baseOp) + " (if the key exists; if absent, condition is true)";
+        return getOperatorExplanation(baseOp) + " (if the context key exists; if absent, condition is " + '<span style="color: green; font-weight: bold;">TRUE</span>' + ")";
       }
       switch (operator) {
         // String condition operators
@@ -350,54 +350,77 @@
                 explanation += `Resource: <span class="highlight">Unknown</span><br>`;
             }
 
-          // Conditions
-          if (stmt.Condition) {
-            explanation += `Condition(s): `;
-            let operatorExplanations = [];
-            // Iterate over each condition operator.
-            for (const [operator, conditions] of Object.entries(stmt.Condition)) {
-              // Determine match phrase: if the operator contains "Not", use "does not match"
-              const matchPhrase = operator.indexOf("Not") !== -1 ? "does not match" : "matches";
-
-              // Determine value prefix and suffix based on the operator:
-              let valuePrefix = "";
-              let valueSuffix = "";
-              if (operator === "NumericLessThan" || operator === "DateLessThan") {
-                valuePrefix = "less than ";
-              } else if (operator === "NumericLessThanEquals" || operator === "DateLessThanEquals") {
-                valueSuffix = " or less";
-              } else if (operator === "NumericGreaterThan" || operator === "DateGreaterThan") {
-                valuePrefix = "greater than ";
-              } else if (operator === "NumericGreaterThanEquals" || operator === "DateGreaterThanEquals") {
-                valueSuffix = " or greater";
-              }
-
-              let conditionKeyExplanations = [];
-              // Process each context key under the operator.
-              for (const [key, value] of Object.entries(conditions)) {
-                const valuesArray = Array.isArray(value) ? value : [value];
-                // Prepend and/or append the prefix/suffix to each value.
-                const processedValues = valuesArray.map(v => valuePrefix + v + valueSuffix);
-                // Use "OR" (or "NOR" for negated operators) to join multiple values.
-                const valueConnector = operator.indexOf("Not") !== -1 ? 
-                '<span style="color: red; font-weight: bold;"> NOR </span>' : 
-                '<span style="color: red; font-weight: bold;"> OR </span>';
-                const conditionValues = processedValues.join(valueConnector);
-                if (operator.endsWith("IfExists")) {
-                    conditionKeyExplanations.push(`<span class="highlight">${key}</span> (if ${key} exists; if absent, condition is true) ${matchPhrase} (${conditionValues})`);
-                  } else {
-                    conditionKeyExplanations.push(`<span class="highlight">${key}</span> ${matchPhrase} (${conditionValues})`);
-                  }
-              }
-              // Combine multiple context keys under the same operator with AND.
-              const conditionsExplanation = conditionKeyExplanations.join(
-                '<span style="color: red; font-weight: bold;"> AND </span>'
-                );
-              operatorExplanations.push(`<span class="highlight">${operator}</span> (<em>${getOperatorExplanation(operator)}</em>): ${conditionsExplanation}`);
+            // Conditions
+            if (stmt.Condition) {
+                explanation += `Condition(s): <br><br>`;  // Add initial spacing
+            
+                let operatorExplanations = [];
+                let operatorCount = 0;  // Track the number of condition operators
+            
+                // Iterate over each condition operator.
+                for (const [operator, conditions] of Object.entries(stmt.Condition)) {
+                operatorCount++;
+            
+                // Determine match phrase: if the operator contains "Not", use "does not match"
+                const matchPhrase = operator.indexOf("Not") !== -1 ? "does not match" : "matches";
+            
+                // Determine value prefix and suffix based on the operator:
+                let valuePrefix = "";
+                let valueSuffix = "";
+                if (operator === "NumericLessThan" || operator === "DateLessThan") {
+                    valuePrefix = "less than ";
+                } else if (operator === "NumericLessThanEquals" || operator === "DateLessThanEquals") {
+                    valueSuffix = " or less";
+                } else if (operator === "NumericGreaterThan" || operator === "DateGreaterThan") {
+                    valuePrefix = "greater than ";
+                } else if (operator === "NumericGreaterThanEquals" || operator === "DateGreaterThanEquals") {
+                    valueSuffix = " or greater";
+                }
+            
+                let conditionKeyExplanations = [];
+                // Process each context key under the operator.
+                for (const [key, value] of Object.entries(conditions)) {
+                    const valuesArray = Array.isArray(value) ? value : [value];
+            
+                    // Prepend and/or append the prefix/suffix to each value.
+                    const processedValues = valuesArray.map(v => valuePrefix + v + valueSuffix);
+            
+                    // Join multiple values using "OR" or "NOR".
+                    const valueConnector = operator.indexOf("Not") !== -1
+                    ? '<span style="color: red; font-weight: bold;"> NOR </span>'
+                    : '<span style="color: red; font-weight: bold;"> OR </span>';
+                    const conditionValues = processedValues.join(valueConnector);
+            
+                    // Construct the explanation sentence for the context key.
+                    let conditionExplanation = `&nbsp;&nbsp;&nbsp;&nbsp;If <span class="highlight">${key}</span> ${matchPhrase} (${conditionValues})`;
+            
+                    conditionKeyExplanations.push(conditionExplanation);
+                }
+            
+                // Group all context keys for the current operator.
+                const conditionsExplanation = conditionKeyExplanations.join('<br><span style="color: red; font-weight: bold;">AND</span><br>');
+            
+                // Add the condition operator return statement and context key note after all keys.
+                const finalOperatorExplanation = `
+                    <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
+                    <span class="highlight">${operator}</span> (<em>${getOperatorExplanation(operator)}</em>):<br>
+                    ${conditionsExplanation}
+                    <br>The Condition Operator <span class="highlight">${operator}</span> returns <span style="color: green; font-weight: bold;">TRUE</span>
+                    <br><br><span style="font-weight: bold;">Note:</span> All context keys under this condition operator must return <span style="color: green; font-weight: bold;">TRUE</span> for the operator to return <span style="color: green; font-weight: bold;">TRUE</span>.
+                    </div>
+                `;
+            
+                operatorExplanations.push(finalOperatorExplanation);
+                }
+            
+                // Join multiple condition operator blocks with AND.
+                explanation += operatorExplanations.join('<br><span style="color: red; font-weight: bold;">AND</span><br><br>');
+            
+                // Add a global note if there are multiple condition operators.
+                if (operatorCount > 1) {
+                explanation += `<br><span style="font-weight: bold;">Note:</span> All condition operators must return <span style="color: green; font-weight: bold;">TRUE</span> for the <span class="highlight">${stmt.Effect || 'effect'}</span> to take effect.<br>`;
+                }
             }
-            // Combine multiple condition operators with AND.
-            explanation += operatorExplanations.join('<span style="color: red; font-weight: bold;"> AND </span>') + `<br>`;
-          }
 
           explanation += `<br>`; // Spacing between statements.
         });
