@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Title of the page -->
+    <title>IAM Policy Explainer</title>
+
+    <!-- Meta information -->
+    <meta name="description" content="A web tool that helps explain AWS IAM policies by breaking down statements, conditions, and operators." />
+    <meta name="author" content="Reese Gerjekian" />
+    <meta name="keywords" content="AWS, IAM Policy, Amazon Web Services, Policy Explainer, AWS Security, JSON, Condition Operators, Reese Gerjekian" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph Metadata (for social sharing) -->
+    <meta property="og:title" content="IAM Policy Explainer" />
+    <meta property="og:description" content="Simplify AWS IAM policies with this easy-to-use explainer tool." />
+    <meta property="og:image" content="image.png" />
+    <meta property="og:url" content="https://iampoex.github.io/" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="IAM Policy Explainer" />
+    <meta name="twitter:description" content="Easily understand AWS IAM policies with this online tool." />
+    <meta name="twitter:image" content="image.png" />
+
+    <!-- Favicon and icons -->
+    <link rel="icon" type="image/png" href="image.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="image.png" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    header {
+      background-color: #0073e6;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .section-title {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: none;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #0073e6;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #0073e6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #005bb5;
+    }
+    .limitations-section {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        font-size: 0.9rem;
+        position: absolute;
+        right: 20px;
+        top: 120px;
+        width: 250px;
+      }
+      @media (max-width: 1024px) {
+        .limitations-section {
+          position: static;
+          width: 100%;
+        }
+      }
+      .limitations-section a {
+        color: #0073e6;
+        text-decoration: underline;
+      }
+      
+      .limitations-section a:hover {
+        color: #005bb5;
+      }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>IAM Policy Explainer</h1>
+  </header>
+  <div class="container">
+    <div class="input-section">
+      <h2 class="section-title">Enter Your IAM Policy</h2>
+      <textarea id="policy-input" placeholder="Paste your IAM policy here..."></textarea>
+      <div class="button-group">
+        <button id="explain-button">Explain Policy</button>
+        <button id="clear-button">Clear</button>
+      </div>
+    </div>
+    <div class="output-section">
+      <h2 class="section-title">Explanation of Statement</h2>
+      <p id="explanation-text">Explanation will appear here after processing the policy input.</p>
+    </div>
+    <div class="limitations-section">
+        <h2 class="section-title">Tool Limitations</h2>
+        <ul>
+            <li>Does not reference the Actions, Resources, and Condition keys for AWS services. For more information, refer to the 
+                <a href="https://docs.aws.amazon.com/service-authorization/latest/reference/reference_policies_actions-resources-contextkeys.html" target="_blank">
+                  AWS service authorization reference.
+                </a>
+            </li>
+            <br>
+            <li>If the policy has very deeply structured or nested elements, the tool may not parse or interpret them correctly, leading to incomplete or inaccurate results.</li>
+            <br>
+            <li>Only works with valid JSON-format IAM policies.</li>
+            <br>
+            <li>Descriptions may not fully explain custom conditions.</li>
+          </ul>
+      </div>
+  </div>
+
+  <script>
+    /**
+     * Returns a tailored explanation for a given condition operator.
+     *
+     * If the operator ends with "IfExists", it is reduced to its base operator
+     * and the explanation is appended with "(if the key exists)".
+     *
+     * @param {string} operator - The IAM policy condition operator.
+     * @returns {string} - A short explanation of the operator.
+     */
+    function getOperatorExplanation(operator) {
+      if (operator.endsWith("IfExists")) {
+        let baseOp = operator.slice(0, -8); // Remove "IfExists"
+        return getOperatorExplanation(baseOp) + " (if the key exists)";
+      }
+      switch (operator) {
+        // String condition operators
+        case "StringEquals":
+          return "Exact matching, case sensitive";
+        case "StringNotEquals":
+          return "Negated matching, case sensitive";
+        case "StringEqualsIgnoreCase":
+          return "Exact matching, ignoring case";
+        case "StringNotEqualsIgnoreCase":
+          return "Negated matching, ignoring case";
+        case "StringLike":
+          return "Case-sensitive pattern matching (wildcards * and ? allowed)";
+        case "StringNotLike":
+          return "Negated case-sensitive pattern matching (wildcards * and ? allowed)";
+        // Numeric condition operators
+        case "NumericEquals":
+          return "Matching";
+        case "NumericNotEquals":
+          return "Negated matching";
+        case "NumericLessThan":
+          return "\"Less than\" matching";
+        case "NumericLessThanEquals":
+          return "\"Less than or equals\" matching";
+        case "NumericGreaterThan":
+          return "\"Greater than\" matching";
+        case "NumericGreaterThanEquals":
+          return "\"Greater than or equals\" matching";
+        // Date condition operators
+        case "DateEquals":
+          return "Matching a specific date";
+        case "DateNotEquals":
+          return "Negated matching";
+        case "DateLessThan":
+          return "Matching before a specific date and time";
+        case "DateLessThanEquals":
+          return "Matching at or before a specific date and time";
+        case "DateGreaterThan":
+          return "Matching after a specific date and time";
+        case "DateGreaterThanEquals":
+          return "Matching at or after a specific date and time";
+        // Boolean condition operator
+        case "Bool":
+          return "Boolean matching (true or false)";
+        // Binary condition operator
+        case "BinaryEquals":
+          return "Exact binary matching (byte-for-byte comparison)";
+        // IP address condition operators
+        case "IpAddress":
+          return "Matching a specified IP address or range (CIDR format)";
+        case "NotIpAddress":
+          return "Negated matching for an IP address or range";
+        // ARN condition operators
+        case "ArnEquals":
+        case "ArnLike":
+          return "Exact or pattern matching for an ARN (case-sensitive)";
+        case "ArnNotEquals":
+        case "ArnNotLike":
+          return "Negated matching for an ARN (case-sensitive)";
+        // Null condition operator
+        case "Null":
+          return "Checks if a condition key is absent (null) or present";
+        default:
+          return "Condition operator explanation not available";
+      }
+    }
+
+    /**
+     * Provides an expanded explanation of an AWS IAM policy.
+     * It handles multiple statements and explains key elements such as:
+     * - Statement ID (Sid)
+     * - Effect (Allow/Deny)
+     * - Principal/NotPrincipal: the entities the statement applies to or excludes.
+     * - Action(s)/NotAction(s): the allowed or excluded actions.
+     * - Resource(s): the targeted AWS resources.
+     * - Condition(s): detailed explanations with inline logical connectors and operator-specific descriptions.
+     *
+     * For numeric and date comparisons:
+     *   - If the operator is "NumericLessThan" or "DateLessThan", a prefix "less than " is prepended.
+     *   - If the operator is "NumericLessThanEquals" or "DateLessThanEquals", a suffix " or less" is appended.
+     *   - If the operator is "NumericGreaterThan" or "DateGreaterThan", a prefix "greater than " is prepended.
+     *   - If the operator is "NumericGreaterThanEquals" or "DateGreaterThanEquals", a suffix " or greater" is appended.
+     *
+     * For negated operators (those containing "Not"), the match phrase becomes "does not match".
+     *
+     * @param {string} policyText - The IAM policy in JSON format.
+     * @returns {string} - An HTML string with the detailed explanation.
+     */
+    function explainPolicy(policyText) {
+      try {
+        const policy = JSON.parse(policyText);
+        if (!policy.Statement) {
+          return "No valid policy statement found.";
+        }
+        // Normalize statements to an array.
+        const statements = Array.isArray(policy.Statement) ? policy.Statement : [policy.Statement];
+        let explanation = "";
+
+        statements.forEach((stmt, index) => {
+          explanation += `<strong>Statement ${index + 1}:</strong><br>`;
+
+          // Statement ID (Sid)
+          if (stmt.Sid) {
+            explanation += `Statement ID (Sid): <span class="highlight">${stmt.Sid}</span><br>`;
+          }
+
+          // Effect
+          if (stmt.Effect) {
+            explanation += `Effect: <span class="highlight">${stmt.Effect}</span><br>`;
+          } else {
+            explanation += `Effect: <span class="highlight">Unknown</span><br>`;
+          }
+
+          // Principal / NotPrincipal
+          if (stmt.Principal) {
+            const principalVal = typeof stmt.Principal === "object" ? JSON.stringify(stmt.Principal) : stmt.Principal;
+            explanation += `Principal: <span class="highlight">${principalVal}</span> — specifies the entity(ies) to which this statement applies.<br>`;
+          } else if (stmt.NotPrincipal) {
+            const notPrincipalVal = typeof stmt.NotPrincipal === "object" ? JSON.stringify(stmt.NotPrincipal) : stmt.NotPrincipal;
+            explanation += `NotPrincipal: <span class="highlight">${notPrincipalVal}</span> — specifies the entity(ies) to which this statement does NOT apply.<br>`;
+          }
+
+          // Action / NotAction
+          if (stmt.Action) {
+            const actions = Array.isArray(stmt.Action) ? stmt.Action.join(", ") : stmt.Action;
+            explanation += `Action(s): <span class="highlight">${actions}</span> — these specify the AWS service operations being affected.<br>`;
+          } else if (stmt.NotAction) {
+            const notActions = Array.isArray(stmt.NotAction) ? stmt.NotAction.join(", ") : stmt.NotAction;
+            explanation += `NotAction(s): <span class="highlight">${notActions}</span> — applies to all actions except those listed.<br>`;
+          } else {
+            explanation += `Action: <span class="highlight">Unknown</span><br>`;
+          }
+
+            // Resource / NotResource
+            if (stmt.Resource) {
+                const resources = Array.isArray(stmt.Resource) ? stmt.Resource.join(", ") : stmt.Resource;
+                if (resources == '*') {
+                    explanation += `Resource(s): <span class="highlight">${resources}</span> — All resources.<br>`;
+                } else {
+                    explanation += `Resource(s): <span class="highlight">${resources}</span> — The targeted AWS resource(s).<br>`;
+                }
+            } else if (stmt.NotResource) {
+                const notResources = Array.isArray(stmt.NotResource) ? stmt.NotResource.join(", ") : stmt.NotResource;
+                if (notResources == '*') {
+                    explanation += `NotResource: <span class="highlight">${notResources}</span> — All resources.<br>`;
+                } else {
+                    explanation += `NotResource: <span class="highlight">${notResources}</span> — explicitly matches every resource except those specified.<br>`;
+                }
+            } else {
+                explanation += `Resource: <span class="highlight">Unknown</span><br>`;
+            }
+
+          // Conditions
+          if (stmt.Condition) {
+            explanation += `Condition(s): `;
+            let operatorExplanations = [];
+            // Iterate over each condition operator.
+            for (const [operator, conditions] of Object.entries(stmt.Condition)) {
+              // Determine match phrase: if the operator contains "Not", use "does not match"
+              const matchPhrase = operator.indexOf("Not") !== -1 ? "does not match" : "matches";
+
+              // Determine value prefix and suffix based on the operator:
+              let valuePrefix = "";
+              let valueSuffix = "";
+              if (operator === "NumericLessThan" || operator === "DateLessThan") {
+                valuePrefix = "less than ";
+              } else if (operator === "NumericLessThanEquals" || operator === "DateLessThanEquals") {
+                valueSuffix = " or less";
+              } else if (operator === "NumericGreaterThan" || operator === "DateGreaterThan") {
+                valuePrefix = "greater than ";
+              } else if (operator === "NumericGreaterThanEquals" || operator === "DateGreaterThanEquals") {
+                valueSuffix = " or greater";
+              }
+
+              let conditionKeyExplanations = [];
+              // Process each context key under the operator.
+              for (const [key, value] of Object.entries(conditions)) {
+                const valuesArray = Array.isArray(value) ? value : [value];
+                // Prepend and/or append the prefix/suffix to each value.
+                const processedValues = valuesArray.map(v => valuePrefix + v + valueSuffix);
+                // Use "OR" (or "NOR" for negated operators) to join multiple values.
+                const valueConnector = operator.indexOf("Not") !== -1 ? 
+                '<span style="color: red; font-weight: bold;"> NOR </span>' : 
+                '<span style="color: red; font-weight: bold;"> OR </span>';
+                const conditionValues = processedValues.join(valueConnector);
+                conditionKeyExplanations.push(`<span class="highlight">${key}</span> ${matchPhrase} (${conditionValues})`);
+              }
+              // Combine multiple context keys under the same operator with AND.
+              const conditionsExplanation = conditionKeyExplanations.join(
+                '<span style="color: red; font-weight: bold;"> AND </span>'
+                );
+              operatorExplanations.push(`<span class="highlight">${operator}</span> (<em>${getOperatorExplanation(operator)}</em>): ${conditionsExplanation}`);
+            }
+            // Combine multiple condition operators with AND.
+            explanation += operatorExplanations.join('<span style="color: red; font-weight: bold;"> AND </span>') + `<br>`;
+          }
+
+          explanation += `<br>`; // Spacing between statements.
+        });
+
+        return explanation;
+      } catch (error) {
+        return "Invalid policy format. Please ensure the input is valid JSON.";
+      }
+    }
+
+    // Event listener for the "Explain Policy" button.
+    document.getElementById("explain-button").addEventListener("click", () => {
+      const policyText = document.getElementById("policy-input").value;
+      const explanation = explainPolicy(policyText);
+      document.getElementById("explanation-text").innerHTML = explanation;
+    });
+
+    // Event listener for the "Clear" button.
+    document.getElementById("clear-button").addEventListener("click", () => {
+      document.getElementById("policy-input").value = "";
+      document.getElementById("explanation-text").textContent =
+        "Explanation will appear here after processing the policy input.";
+    });
+  </script>
+</body>
+</html>
