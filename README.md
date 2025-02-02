@@ -103,7 +103,7 @@ You can modify or extend the tool to:
 
 ## 📜 **License**
 
-This project is licensed under [MIT License](). Feel free to customize and use the tool as needed.
+This project is licensed under [MIT License](https://github.com/iampoex/iampoex.github.io/tree/main?tab=MIT-1-ov-file#MIT-1-ov-file). Feel free to customize and use the tool as needed.
 
 ---
 
