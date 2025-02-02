@@ -30,84 +30,115 @@
     <link rel="apple-touch-icon" href="image.png" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
-    }
-    header {
-      background-color: #0073e6;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-    .container {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 20px;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    .section-title {
-      font-size: 1.5rem;
-      margin-bottom: 10px;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      padding: 10px;
-      margin-bottom: 20px;
-      font-family: monospace;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: none;
-    }
-    .highlight {
-      font-weight: bold;
-      color: #0073e6;
-    }
-    button {
-      padding: 10px 20px;
-      background-color: #0073e6;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      margin-right: 10px;
-    }
-    button:hover {
-      background-color: #005bb5;
-    }
-    .limitations-section {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+      
+      header {
+        background-color: #0073e6;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+      }
+      
+      /* Flexbox container for layout */
+      .layout-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 20px;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      
+      /* Main content section */
+      .content-section {
+        flex: 1 1 60%;
+        min-width: 300px;
+      }
+      
+      /* Limitations section */
+      .limitations-section {
+        flex: 1 1 35%;
         background-color: #fff3cd;
         color: #856404;
         border: 1px solid #ffeeba;
         border-radius: 8px;
         padding: 20px;
-        margin-top: 20px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         font-size: 0.9rem;
-        position: absolute;
-        right: 20px;
-        top: 120px;
-        width: 250px;
       }
+      
+      /* Title styles */
+      .section-title {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+      }
+      
+      /* Textarea */
+      textarea {
+        width: 100%;
+        height: 200px;
+        padding: 10px;
+        margin-bottom: 20px;
+        font-family: monospace;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
+      }
+      
+      /* Buttons */
+      button {
+        padding: 10px 20px;
+        background-color: #0073e6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-right: 10px;
+      }
+      
+      button:hover {
+        background-color: #005bb5;
+      }
+      
+      /* Responsive adjustments */
       @media (max-width: 1024px) {
+        .layout-container {
+          flex-direction: column;
+        }
+      
         .limitations-section {
-          position: static;
+          width: 100%;
+        }
+      
+        .content-section {
           width: 100%;
         }
       }
-      .limitations-section a {
-        color: #0073e6;
-        text-decoration: underline;
-      }
       
-      .limitations-section a:hover {
-        color: #005bb5;
+      @media (max-width: 768px) {
+        .section-title {
+          font-size: 1.2rem;
+        }
+      
+        button {
+          font-size: 0.9rem;
+          padding: 8px 16px;
+        }
+      
+        .limitations-section {
+          font-size: 0.85rem;
+          padding: 15px;
+        }
       }
   </style>
 </head>
@@ -115,34 +146,36 @@
   <header>
     <h1>IAM Policy Explainer</h1>
   </header>
-  <div class="container">
-    <div class="input-section">
-      <h2 class="section-title">Enter Your IAM Policy</h2>
-      <textarea id="policy-input" placeholder="Paste your IAM policy here..."></textarea>
-      <div class="button-group">
-        <button id="explain-button">Explain Policy</button>
-        <button id="clear-button">Clear</button>
-      </div>
-    </div>
-    <div class="output-section">
-      <h2 class="section-title">Explanation of Statement</h2>
-      <p id="explanation-text">Explanation will appear here after processing the policy input.</p>
-    </div>
-    <div class="limitations-section">
-        <h2 class="section-title">Tool Limitations</h2>
-        <ul>
-            <li>Does not reference the Actions, Resources, and Condition keys for AWS services. For more information, refer to the 
-                <a href="https://docs.aws.amazon.com/service-authorization/latest/reference/reference_policies_actions-resources-contextkeys.html" target="_blank">
-                  AWS service authorization reference.
-                </a>
-            </li>
-            <br>
-            <li>If the policy has very deeply structured or nested elements, the tool may not parse or interpret them correctly, leading to incomplete or inaccurate results.</li>
-            <br>
-            <li>Only works with valid JSON-format IAM policies.</li>
-            <br>
-            <li>Descriptions may not fully explain custom conditions.</li>
-          </ul>
+  <div class="layout-container">
+    <div class="container">
+        <div class="input-section">
+          <h2 class="section-title">Enter Your IAM Policy</h2>
+          <textarea id="policy-input" placeholder="Paste your IAM policy here..."></textarea>
+          <div class="button-group">
+            <button id="explain-button">Explain Policy</button>
+            <button id="clear-button">Clear</button>
+          </div>
+        </div>
+        <div class="output-section">
+          <h2 class="section-title">Explanation of Statement</h2>
+          <p id="explanation-text">Explanation will appear here after processing the policy input.</p>
+        </div>
+        <div class="limitations-section">
+            <h2 class="section-title">Tool Limitations</h2>
+            <ul>
+                <li>Does not reference the Actions, Resources, and Condition keys for AWS services. For more information, refer to the 
+                    <a href="https://docs.aws.amazon.com/service-authorization/latest/reference/reference_policies_actions-resources-contextkeys.html" target="_blank">
+                      AWS service authorization reference.
+                    </a>
+                </li>
+                <br>
+                <li>If the policy has very deeply structured or nested elements, the tool may not parse or interpret them correctly, leading to incomplete or inaccurate results.</li>
+                <br>
+                <li>Only works with valid JSON-format IAM policies.</li>
+                <br>
+                <li>Descriptions may not fully explain custom conditions.</li>
+              </ul>
+          </div>
       </div>
   </div>
 
