@@ -159,7 +159,7 @@
     function getOperatorExplanation(operator) {
       if (operator.endsWith("IfExists")) {
         let baseOp = operator.slice(0, -8); // Remove "IfExists"
-        return getOperatorExplanation(baseOp) + " (if the key exists)";
+        return getOperatorExplanation(baseOp) + " (if the key exists; if absent, condition is true)";
       }
       switch (operator) {
         // String condition operators
@@ -345,7 +345,11 @@
                 '<span style="color: red; font-weight: bold;"> NOR </span>' : 
                 '<span style="color: red; font-weight: bold;"> OR </span>';
                 const conditionValues = processedValues.join(valueConnector);
-                conditionKeyExplanations.push(`<span class="highlight">${key}</span> ${matchPhrase} (${conditionValues})`);
+                if (operator.endsWith("IfExists")) {
+                    conditionKeyExplanations.push(`<span class="highlight">${key}</span> (if ${key} exists; if absent, condition is true) ${matchPhrase} (${conditionValues})`);
+                  } else {
+                    conditionKeyExplanations.push(`<span class="highlight">${key}</span> ${matchPhrase} (${conditionValues})`);
+                  }
               }
               // Combine multiple context keys under the same operator with AND.
               const conditionsExplanation = conditionKeyExplanations.join(
