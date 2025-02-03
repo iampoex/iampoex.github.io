@@ -313,66 +313,75 @@
     function explainPolicy(policyText) {
       try {
         const policy = JSON.parse(policyText);
-        if (!policy.Statement) {
-          return "No valid policy statement found.";
+        if (!policy.Statement || (typeof policy.Statement !== "object" && !Array.isArray(policy.Statement))) {
+            return "No valid policy statement found.";
         }
-        // Normalize statements to an array.
+    
+        console.log("Parsed policy:", policy);  // Debug log to inspect the parsed policy
+    
+        // Normalize statements to an array
         const statements = Array.isArray(policy.Statement) ? policy.Statement : [policy.Statement];
         let explanation = "";
 
         statements.forEach((stmt, index) => {
           explanation += `<strong>Statement ${index + 1}:</strong><br>`;
-
-          // Statement ID (Sid)
-          if (stmt.Sid) {
-            explanation += `Statement ID (Sid): <span class="highlight">${stmt.Sid}</span><br>`;
-          }
-
-          // Effect
-          if (stmt.Effect) {
-            explanation += `Effect: <span class="highlight">${stmt.Effect}</span><br>`;
-          } else {
-            explanation += `Effect: <span class="highlight">Unknown</span><br>`;
-          }
-
-          // Principal / NotPrincipal
-          if (stmt.Principal) {
-            const principalVal = typeof stmt.Principal === "object" ? JSON.stringify(stmt.Principal) : stmt.Principal;
-            explanation += `Principal: <span class="highlight">${principalVal}</span> — specifies the entity(ies) to which this statement applies.<br>`;
-          } else if (stmt.NotPrincipal) {
-            const notPrincipalVal = typeof stmt.NotPrincipal === "object" ? JSON.stringify(stmt.NotPrincipal) : stmt.NotPrincipal;
-            explanation += `NotPrincipal: <span class="highlight">${notPrincipalVal}</span> — specifies the entity(ies) to which this statement does NOT apply.<br>`;
-          }
-
-          // Action / NotAction
-          if (stmt.Action) {
-            const actions = Array.isArray(stmt.Action) ? stmt.Action.join(", ") : stmt.Action;
-            explanation += `Action(s): <span class="highlight">${actions}</span> — these specify the AWS service operations being affected.<br>`;
-          } else if (stmt.NotAction) {
-            const notActions = Array.isArray(stmt.NotAction) ? stmt.NotAction.join(", ") : stmt.NotAction;
-            explanation += `NotAction(s): <span class="highlight">${notActions}</span> — applies to all actions except those listed.<br>`;
-          } else {
-            explanation += `Action: <span class="highlight">Unknown</span><br>`;
-          }
-
-            // Resource / NotResource
-            if (stmt.Resource) {
-                const resources = Array.isArray(stmt.Resource) ? stmt.Resource.join(", ") : stmt.Resource;
-                if (resources == '*') {
-                    explanation += `Resource(s): <span class="highlight">${resources}</span> — All resources.<br>`;
-                } else {
-                    explanation += `Resource(s): <span class="highlight">${resources}</span> — The targeted AWS resource(s).<br>`;
+          Object.keys(stmt).forEach(key => {
+            try {
+                switch (key) {
+                    case "Sid":
+                        explanation += `Statement ID (Sid): <span class="highlight">${stmt[key]}</span><br>`;
+                        break;
+        
+                    case "Effect":
+                        explanation += `Effect: <span class="highlight">${stmt[key]}</span><br>`;
+                        break;
+        
+                    case "Principal":
+                        const principalVal = typeof stmt[key] === "object" ? JSON.stringify(stmt[key]) : stmt[key];
+                        explanation += `Principal: <span class="highlight">${principalVal}</span> — specifies the entity(ies) to which this statement applies.<br>`;
+                        break;
+        
+                    case "NotPrincipal":
+                        const notPrincipalVal = typeof stmt[key] === "object" ? JSON.stringify(stmt[key]) : stmt[key];
+                        explanation += `NotPrincipal: <span class="highlight">${notPrincipalVal}</span> — specifies the entity(ies) to which this statement does NOT apply.<br>`;
+                        break;
+        
+                    case "Action":
+                        const actions = Array.isArray(stmt[key]) ? stmt[key].join(", ") : stmt[key];
+                        explanation += `Action(s): <span class="highlight">${actions}</span> — these specify the AWS service operations being allowed.<br>`;
+                        break;
+        
+                    case "NotAction":
+                        const notActions = Array.isArray(stmt[key]) ? stmt[key].join(", ") : stmt[key];
+                        explanation += `NotAction(s): <span class="highlight">${notActions}</span> — applies to all actions except those listed.<br>`;
+                        break;
+        
+                    case "Resource":
+                        const resources = Array.isArray(stmt[key]) ? stmt[key].join(", ") : stmt[key];
+                        explanation += resources === '*'
+                            ? `Resource(s): <span class="highlight">${resources}</span> — All resources are targeted.<br>`
+                            : `Resource(s): <span class="highlight">${resources}</span> — The targeted AWS resource(s).<br>`;
+                        break;
+        
+                    case "NotResource":
+                        const notResources = Array.isArray(stmt[key]) ? stmt[key].join(", ") : stmt[key];
+                        explanation += notResources === '*'
+                            ? `NotResource: <span class="highlight">${notResources}</span> — All resources are excluded.<br>`
+                            : `NotResource: <span class="highlight">${notResources}</span> — Every resource except those specified is targeted.<br>`;
+                        break;
+        
+                    case "Condition":
+                        explanation += `Condition(s):<br><br>${processConditions(stmt[key])}`;
+                        break;
+        
+                    default:
+                        explanation += `${key}: <span class="highlight">Unsupported or unknown element</span><br>`;
+                        break;
                 }
-            } else if (stmt.NotResource) {
-                const notResources = Array.isArray(stmt.NotResource) ? stmt.NotResource.join(", ") : stmt.NotResource;
-                if (notResources == '*') {
-                    explanation += `NotResource: <span class="highlight">${notResources}</span> — All resources.<br>`;
-                } else {
-                    explanation += `NotResource: <span class="highlight">${notResources}</span> — explicitly matches every resource except those specified.<br>`;
-                }
-            } else {
-                explanation += `Resource: <span class="highlight">Unknown</span><br>`;
+            } catch (error) {
+                console.error(`Error processing key "${key}":`, error);
             }
+        });
 
             // Conditions
             if (stmt.Condition) {
