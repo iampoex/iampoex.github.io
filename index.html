@@ -87,17 +87,49 @@
       }
       
       /* Textarea */
-      textarea {
-        width: 100%;
-        height: 200px;
-        padding: 10px;
-        margin-bottom: 20px;
-        font-family: monospace;
-        font-size: 1rem;
+      .editor-container {
+        display: flex;
         border: 1px solid #ccc;
         border-radius: 4px;
-        resize: vertical;
-      }
+        background: #fff;
+        font-family: monospace;
+        overflow: hidden;
+        margin-bottom: 20px;
+        height: 400px;
+    }
+    
+    .line-numbers {
+        background: #f0f0f0;
+        color: #888;
+        user-select: none;
+        font-family: monospace;
+        text-align: right;
+        padding-right: 10px;
+        overflow: hidden;
+        flex-shrink: 0;
+        border-right: 1px solid #ccc;
+        padding: 1px 0;
+    }
+    
+    .line-numbers span {
+        display: block;
+        height: 24px;
+        line-height: 24px;
+    }
+    
+    textarea {
+        flex: 1;
+        padding: 0;
+        font-size: 14px;
+        font-family: monospace;
+        border: none;
+        outline: none;
+        line-height: 24px;
+        resize: none;
+        overflow-y: scroll;
+        white-space: pre;
+        height: 100%;
+    }
       
       /* Buttons */
       button {
@@ -166,6 +198,7 @@
         color: #ffdd57;
       }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
 </head>
 <body>
   <header>
@@ -175,7 +208,10 @@
     <div class="container">
         <div class="input-section">
           <h2 class="section-title">Enter Your IAM Policy</h2>
-          <textarea id="policy-input" placeholder="Paste your IAM policy here..."></textarea>
+          <div class="editor-container">
+            <div class="line-numbers" id="lineNumbers"></div>
+            <textarea id="policy-input" oninput="updateLineNumbers()" onscroll="syncEditorScroll()"></textarea>
+        </div>
           <div class="button-group">
             <button id="explain-button">Explain Policy</button>
             <button id="clear-button">Clear</button>
@@ -312,6 +348,8 @@
      */
     function explainPolicy(policyText) {
       try {
+        // Validate and parse JSON using jsonlint
+        jsonlint.parse(policyText);
         const policy = JSON.parse(policyText);
         if (!policy.Statement || (typeof policy.Statement !== "object" && !Array.isArray(policy.Statement))) {
             return "No valid policy statement found.";
@@ -460,7 +498,8 @@
 
         return explanation;
       } catch (error) {
-        return "Invalid policy format. Please ensure the input is valid JSON.";
+        // Format the error message like the previous compiler output
+        return formatJsonErrorMessage(error.message, policyText);
       }
     }
 
@@ -477,6 +516,56 @@
       document.getElementById("explanation-text").textContent =
         "Explanation will appear here after processing the policy input.";
     });
+
+    function formatJsonErrorMessage(errorMessage, policyText) {
+      const errorMatch = errorMessage.match(/on line (\d+)/);  // Extract the error line number
+      let lineNumber = errorMatch ? parseInt(errorMatch[1]) : -1;
+  
+      // Get the lines of the JSON input
+      const lines = policyText.split('\n');
+  
+      if (lineNumber > 0 && lineNumber <= lines.length) {
+          const lineContent = lines[lineNumber - 1];
+          return `
+              Error: Parse error on line ${lineNumber}:<br>
+              <code>${lineContent}</code><br>
+              ${'^'.padStart(lineContent.length, '-')}<br>
+              ${errorMessage}
+          `;
+      }
+  
+      // Fallback for unexpected errors without line information
+      return `Error: ${errorMessage}`;
+  }
+
+    function updateLineNumbers() {
+      const editor = document.getElementById('policy-input');
+      const lineNumbers = document.getElementById('lineNumbers');
+      let lines = editor.value.split('\n');
+  
+      if (lines.length > 1 && lines[lines.length - 1] === '') {
+          lines.pop();
+      }
+  
+      lineNumbers.innerHTML = '';
+      for (let i = 1; i <= lines.length; i++) {
+          const lineElement = document.createElement('span');
+          lineElement.textContent = i;
+          lineNumbers.appendChild(lineElement);
+      }
+  
+      syncEditorScroll();
+  }
+  
+  function syncEditorScroll() {
+      const editor = document.getElementById('policy-input');
+      const lineNumbers = document.getElementById('lineNumbers');
+      lineNumbers.scrollTop = editor.scrollTop;
+  }
+  
+  document.getElementById('policy-input').addEventListener('scroll', syncEditorScroll);
+  document.getElementById('policy-input').addEventListener('input', updateLineNumbers);
+  updateLineNumbers();
   </script>
 </body>
 </html>
