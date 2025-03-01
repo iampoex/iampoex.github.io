@@ -35,6 +35,16 @@
         padding: 0;
         background-color: #f4f4f4;
       }
+
+      html, body {
+        overflow-x: hidden; /* Prevents horizontal scrolling */
+        width: 100%; /* Ensures no extra width */
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
       
       header {
         background-color: #0073e6;
@@ -185,7 +195,7 @@
         position: relative;
         bottom: 0;
         width: 100%;
-        margin-top: 20px;
+        margin-top: auto;
       }
       
       .footer a {
