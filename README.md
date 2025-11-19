@@ -52,9 +52,15 @@ A web tool that helps explain AWS Identity and Access Management (IAM) policies 
 ```
 Statement 1:
 Effect: Allow
-Action(s): s3:PutObject — these specify the AWS service operations being affected.
+Action(s): s3:PutObject — these specify the AWS service operations being allowed.
 Resource(s): arn:aws:s3:::my-bucket/* — The targeted AWS resource(s).
-Condition(s): StringEquals (Exact matching, case sensitive): aws:username matches (johndoe)
+Condition(s):
+
+StringEquals (Exact matching, case sensitive):
+    If aws:username matches (johndoe)
+The Condition Operator StringEquals returns TRUE
+
+Note: All context keys under this condition operator must return TRUE for the operator to return TRUE. 
 ```
 
 ---
